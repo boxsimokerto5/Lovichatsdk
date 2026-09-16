@@ -21,8 +21,20 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      # Siapkan file .env dari .env.example jika belum ada
+      - name: Prepare Environment File
+        run: |
+          if [ ! -f .env ]; then
+            cp .env.example .env
+          fi
+
+      # Terima Android SDK Licenses otomatis
+      - name: Accept Android SDK Licenses
+        run: |
+          mkdir -p "$ANDROID_HOME/licenses" || true
+          echo -e "24333f8a63b1d7f28fe163c760608242b78d3495\n84831b9409646a918e30573bab4c9c91346d8abd\nd97544451430f16f4dd11befd83ce4d1e0f2f1db" > "$ANDROID_HOME/licenses/android-sdk-license" || true
+          echo -e "84831b9409646a918e30573bab4c9c91346d8abd" > "$ANDROID_HOME/licenses/android-sdk-preview-license" || true
+          yes | ($ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true)
 
       # Otomatisasi generate release signature key (Keystore)
       - name: Generate Automatic Release Keystore
@@ -39,7 +51,11 @@ jobs:
             -dname "CN=Lovy Chat Forever, OU=Production, O=LovyChat, L=Jakarta, ST=DKI, C=ID"
 
       - name: Grant Execute Permission to Gradle
-        run: chmod +x gradlew || true
+        run: |
+          if [ ! -f gradlew ]; then
+            gradle wrapper --gradle-version 9.3.1
+          fi
+          chmod +x gradlew
 
       # Membangun Android App Bundle (.aab) siap upload ke Google Play Store
       - name: Build Android App Bundle (AAB for Google Play)
