@@ -1,0 +1,76 @@
+name: Build Release APK and AAB (Play Store)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-release:
+    name: Build Signed Release APK & AAB
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Project Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      # Otomatisasi generate release signature key (Keystore)
+      - name: Generate Automatic Release Keystore
+        run: |
+          mkdir -p keystore
+          keytool -genkeypair -v \
+            -keystore keystore/release.keystore \
+            -alias lovychat \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass "LovyChat2026SecureKey" \
+            -keypass "LovyChat2026SecureKey" \
+            -dname "CN=Lovy Chat Forever, OU=Production, O=LovyChat, L=Jakarta, ST=DKI, C=ID"
+
+      - name: Grant Execute Permission to Gradle
+        run: chmod +x gradlew || true
+
+      # Membangun Android App Bundle (.aab) siap upload ke Google Play Store
+      - name: Build Android App Bundle (AAB for Google Play)
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/keystore/release.keystore
+          STORE_PASSWORD: LovyChat2026SecureKey
+          KEY_ALIAS: lovychat
+          KEY_PASSWORD: LovyChat2026SecureKey
+        run: ./gradlew :app:bundleRelease --no-daemon --stacktrace
+
+      # Membangun APK Release yang sudah ditandatangani
+      - name: Build Signed APK Release
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/keystore/release.keystore
+          STORE_PASSWORD: LovyChat2026SecureKey
+          KEY_ALIAS: lovychat
+          KEY_PASSWORD: LovyChat2026SecureKey
+        run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
+
+      # Upload AAB sebagai Artifact untuk download langsung
+      - name: Upload Google Play Store Bundle (AAB)
+        uses: actions/upload-artifact@v4
+        with:
+          name: LovyChat-PlayStore-Release-AAB
+          path: app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+
+      # Upload APK sebagai Artifact untuk instalasi dan testing langsung
+      - name: Upload Signed Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: LovyChat-Signed-Release-APK
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error

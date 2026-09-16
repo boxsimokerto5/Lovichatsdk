@@ -1,0 +1,6 @@
+{
+  "name": "Lovy Chat",
+  "description": "Aplikasi pesan instan, grup chat, berbagi foto real-time, cari teman sekitar (radar), dan enkripsi end-to-end (E2EE).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
